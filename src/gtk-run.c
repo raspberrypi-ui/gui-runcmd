@@ -279,6 +279,8 @@ static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
     reload_notify_id = NULL;
     menu_cache_unref(menu_cache);
     menu_cache = NULL;
+
+    gtk_main_quit ();
 }
 
 static void on_entry_changed( GtkEntry* entry, GtkImage* img )
