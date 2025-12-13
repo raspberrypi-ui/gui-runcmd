@@ -32,27 +32,12 @@
 #include <string.h>
 #include <unistd.h>
 
-//#include "misc.h"
-//#include "private.h"
-#ifndef DISABLE_MENU
 #include <menu-cache.h>
-#endif
-
-//#include "gtk-compat.h"
-
-void launch_application (const char *appname)
-{
-    char *cmd[2] = {(char *) appname, NULL};
-    g_spawn_async (NULL, cmd, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
-}
-
 
 static GtkWidget* win = NULL; /* the run dialog */
-#ifndef DISABLE_MENU
 static MenuCache* menu_cache = NULL;
 static GSList* app_list = NULL; /* all known apps in menu cache */
 static gpointer reload_notify_id = NULL;
-#endif
 
 typedef struct _ThreadData
 {
@@ -63,7 +48,12 @@ typedef struct _ThreadData
 
 static ThreadData* thread_data = NULL; /* thread data used to load availble programs in PATH */
 
-#ifndef DISABLE_MENU
+void launch_application (const char *appname)
+{
+    char *cmd[2] = {(char *) appname, NULL};
+    g_spawn_async (NULL, cmd, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
+}
+
 static MenuCacheApp* match_app_by_exec(const char* exec)
 {
     GSList* l;
@@ -84,21 +74,6 @@ static MenuCacheApp* match_app_by_exec(const char* exec)
         const char* app_exec = menu_cache_app_get_exec(app);
         if ( ! app_exec)
             continue;
-#if 0   /* This is useless and incorrect. */
-        /* Dirty hacks to skip sudo programs. This can be a little bit buggy */
-        if( g_str_has_prefix(app_exec, "gksu") )
-        {
-            app_exec += 4;
-            if( app_exec[0] == '\0' ) /* "gksu" itself */
-                app_exec -= 4;
-            else if( app_exec[0] == ' ' ) /* "gksu something..." */
-                ++app_exec;
-            else if( g_str_has_prefix(app_exec, "do ") ) /* "gksudo something" */
-                app_exec += 3;
-        }
-        else if( g_str_has_prefix(app_exec, "kdesu ") ) /* kdesu */
-            app_exec += 6;
-#endif
 
         if( g_path_is_absolute(app_exec) )
         {
@@ -163,7 +138,6 @@ static MenuCacheApp* match_app_by_exec(const char* exec)
     g_free(exec_path);
     return ret;
 }
-#endif
 
 static void setup_auto_complete_with_data(ThreadData* data)
 {
@@ -247,38 +221,22 @@ static gpointer thread_func(ThreadData* data)
     data->files = list;
     /* install an idle handler to free associated data */
     g_idle_add((GSourceFunc)on_thread_finished, data);
-#if GLIB_CHECK_VERSION(2, 32, 0)
     g_thread_unref(g_thread_self());
-#endif
 
     return NULL;
 }
 
 static void setup_auto_complete( GtkEntry* entry )
 {
-    gboolean cache_is_available = FALSE;
-    /* FIXME: consider saving the list of commands as on-disk cache. */
-    if( cache_is_available )
-    {
-        /* load cached program list */
-    }
-    else
-    {
-        /* load in another working thread */
-        thread_data = g_slice_new0(ThreadData); /* the data will be freed in idle handler later. */
-        thread_data->entry = entry;
-#if GLIB_CHECK_VERSION(2, 32, 0)
-        g_thread_new("gtk-run-autocomplete", (GThreadFunc)thread_func, thread_data);
-        /* we don't use loader_thread_id but Glib 2.32 crashes if we unref
-           GThread while it's in creation progress. It is a bug of GLib
-           certainly but as workaround we'll unref it in the thread itself */
-#else
-        g_thread_create((GThreadFunc)thread_func, thread_data, FALSE, NULL);
-#endif
-    }
+    /* load in another working thread */
+    thread_data = g_slice_new0(ThreadData); /* the data will be freed in idle handler later. */
+    thread_data->entry = entry;
+    g_thread_new("gtk-run-autocomplete", (GThreadFunc)thread_func, thread_data);
+    /* we don't use loader_thread_id but Glib 2.32 crashes if we unref
+       GThread while it's in creation progress. It is a bug of GLib
+       certainly but as workaround we'll unref it in the thread itself */
 }
 
-#ifndef DISABLE_MENU
 static void mc_unref (gpointer data, gpointer)
 {
     MenuCacheItem* item = (MenuCacheItem *) data;
@@ -295,7 +253,6 @@ static void reload_apps(MenuCache* cache, gpointer)
     }
     app_list = menu_cache_list_all_apps(cache);
 }
-#endif
 
 static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
 {
@@ -312,7 +269,6 @@ static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
     gtk_widget_destroy( (GtkWidget*)dlg );
     win = NULL;
 
-#ifndef DISABLE_MENU
     /* free app list */
     g_slist_foreach(app_list, mc_unref, NULL);
     g_slist_free(app_list);
@@ -323,10 +279,8 @@ static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
     reload_notify_id = NULL;
     menu_cache_unref(menu_cache);
     menu_cache = NULL;
-#endif
 }
 
-#ifndef DISABLE_MENU
 static void on_entry_changed( GtkEntry* entry, GtkImage* img )
 {
     const char* str = gtk_entry_get_text(entry);
@@ -344,20 +298,6 @@ static void on_entry_changed( GtkEntry* entry, GtkImage* img )
         }
     }
     gtk_image_set_from_icon_name(img, "gtk-execute", GTK_ICON_SIZE_DND);
-}
-#endif
-
-static void activate_window(GtkWindow* toplevel_window)
-{
-    /* Calling gtk_window_present() cannot support
-     * source indication. Use our own implementation.
-     * Without this, the window activated might be
-     * put in background by WM to avoid stealing
-     * of focus.
-     * See EWMH spec, source indication part:
-     * http://standards.freedesktop.org/wm-spec/wm-spec-latest.html#sourceindication
-     */
-        gtk_window_present(toplevel_window);
 }
 
 int main (int argc, char *argv[])
@@ -402,34 +342,18 @@ int main (int argc, char *argv[])
         setup_auto_complete( (GtkEntry*)entry );
         gtk_widget_show(win);
 
-#ifndef DISABLE_MENU
         g_signal_connect(entry ,"changed", G_CALLBACK(on_entry_changed), img);
 
         /* get all apps */
-#ifndef MENU_CACHE_CHECK_VERSION
-#define MENU_CACHE_CHECK_VERSION(a,b,c) 0
-#endif
-#if MENU_CACHE_CHECK_VERSION(0, 6, 1)
         menu_cache = menu_cache_lookup_sync(g_getenv("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
         if( menu_cache )
         {
-#else
-        /* SF bug #689: menu_cache_lookup_sync() was fail-prone before 0.6.1 */
-        menu_cache = menu_cache_lookup(g_getenv("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
-        if( menu_cache )
-        {
-            menu_cache_reload(menu_cache);
-#endif
             app_list = menu_cache_list_all_apps(menu_cache);
             reload_notify_id = menu_cache_add_reload_notify(menu_cache, reload_apps, NULL);
         }
-#endif
     }
 
-    activate_window(GTK_WINDOW(win));
+    gtk_window_present(GTK_WINDOW(win));
     gtk_main ();
     return 0;
 }
-
-
-/* vim: set sw=4 et sts=4 ts=4 : */
