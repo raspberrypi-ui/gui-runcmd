@@ -13,3 +13,4 @@ add_project_arguments('-DPACKAGE_LOCALE_DIR="' + share_dir + '/locale"', languag
 add_project_arguments('-DPACKAGE_DATA_DIR="' + resource_dir + '"', language : 'c' )
 
 subdir('src')
+subdir('data')
