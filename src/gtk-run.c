@@ -56,8 +56,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef struct
 {
     gboolean cancel;    /* is the loading cancelled */
-    GSList* files;      /* all executable files found */
-    GtkEntry* entry;
+    GSList *files;      /* all executable files found */
+    GtkEntry *entry;
 } ThreadData;
 
 /*----------------------------------------------------------------------------*/
@@ -65,10 +65,10 @@ typedef struct
 /*----------------------------------------------------------------------------*/
 
 static GtkWidget *win, *entry, *icon;
-static MenuCache* menu_cache = NULL;
-static GSList* app_list = NULL;             /* all known apps in menu cache */
+static MenuCache *menu_cache = NULL;
+static GSList *app_list = NULL;             /* all known apps in menu cache */
 static gpointer reload_notify_id = NULL;
-static ThreadData* thread_data = NULL;      /* thread data used to load available programs in PATH */
+static ThreadData *thread_data = NULL;      /* thread data used to load available programs in PATH */
 
 /*----------------------------------------------------------------------------*/
 /* Prototypes                                                                 */
