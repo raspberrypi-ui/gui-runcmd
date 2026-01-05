@@ -295,6 +295,16 @@ static void button_handler (GtkWidget *widget, gpointer data)
     on_response (win, (long) data, NULL);
 }
 
+static gboolean key_press_event (GtkWidget *widget, GdkEventKey *event, gpointer data)
+{
+    if (event->keyval == GDK_KEY_Escape)
+    {
+        on_response (win, GTK_RESPONSE_CANCEL, NULL);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static void on_entry_changed( GtkEntry* entry, GtkImage* img )
 {
     const char* str = gtk_entry_get_text(entry);
@@ -333,6 +343,7 @@ int main (int argc, char *argv[])
     img = (GtkWidget *) gtk_builder_get_object (builder, "icon");
 
     g_signal_connect (G_OBJECT (win), "delete_event", G_CALLBACK (delete_event), NULL);
+    g_signal_connect (G_OBJECT (win), "key-press-event", G_CALLBACK (key_press_event), NULL);
     g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_OK);
     g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_CANCEL);
     g_signal_connect(entry ,"changed", G_CALLBACK(on_entry_changed), img);
