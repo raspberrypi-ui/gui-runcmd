@@ -1,0 +1,13 @@
+Source: gui-runner
+Section: utils
+Priority: optional
+Maintainer: Simon Long <simon@raspberrypi.com>
+Build-Depends: debhelper-compat (= 13), meson, libgtk-3-dev (>= 3.24), intltool (>= 0.40.0), libmenu-cache-dev | libmenu-cache1-dev
+Standards-Version: 4.5.1
+Homepage: http://raspberrypi.com/
+
+Package: gui-runner
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: GUI command-line application launcher for Raspberry Pi
+ Small application allowing command lines to be used from a GUI environment.
