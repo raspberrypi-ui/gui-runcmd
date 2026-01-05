@@ -198,25 +198,15 @@ static void setup_auto_complete_with_data(ThreadData* data)
     g_object_unref( comp );
 }
 
-static void file_free (gpointer data, gpointer)
-{
-    g_free (data);
-}
-
-static void thread_data_free(ThreadData* data)
-{
-    g_slist_foreach(data->files, file_free, NULL);
-    g_slist_free(data->files);
-    g_slice_free(ThreadData, data);
-}
-
-static gboolean on_thread_finished(ThreadData* data)
+static gboolean on_thread_finished (ThreadData* data)
 {
     /* don't setup entry completion if the thread is already cancelled. */
-    if( !data->cancel )
-        setup_auto_complete_with_data(thread_data);
-    thread_data_free(data);
-    thread_data = NULL; /* global thread_data pointer */
+    if (!data->cancel) setup_auto_complete_with_data (thread_data);
+
+    g_slist_free_full (data->files, g_free);
+    g_slice_free (ThreadData, data);
+
+    thread_data = NULL;
     return FALSE;
 }
 
