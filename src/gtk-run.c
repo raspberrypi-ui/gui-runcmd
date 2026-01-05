@@ -267,89 +267,66 @@ static void setup_auto_complete (void)
        certainly but as workaround we'll unref it in the thread itself */
 }
 
-static void mc_unref (gpointer data, gpointer)
+static void mc_unref (gpointer data, gpointer user_data)
 {
-    MenuCacheItem* item = (MenuCacheItem *) data;
+    MenuCacheItem *item = (MenuCacheItem *) data;
     menu_cache_item_unref (item);
 }
 
-static void reload_apps(MenuCache* cache, gpointer)
+static void reload_apps (MenuCache* cache, gpointer user_data)
 {
-    if(app_list)
+    if (app_list)
     {
-        g_slist_foreach(app_list, mc_unref, NULL);
-        g_slist_free(app_list);
+        g_slist_foreach (app_list, mc_unref, NULL);
+        g_slist_free (app_list);
     }
-    app_list = menu_cache_list_all_apps(cache);
+    app_list = menu_cache_list_all_apps (cache);
 }
 
-static void on_response( GtkWidget* dlg, gint response, gpointer user_data )
+static void on_entry_changed (GtkEntry* entry, gpointer user_data)
 {
-    if (response == GTK_RESPONSE_OK)
+    const char *str = gtk_entry_get_text (entry);
+    MenuCacheApp *app = NULL;
+
+    if (str && *str) app = match_app_by_exec (str);
+
+    if (app)
     {
-        launch_application (gtk_entry_get_text (GTK_ENTRY (entry)));
+        const char *name = menu_cache_item_get_icon (MENU_CACHE_ITEM (app));
+        if (name)
+        {
+            gtk_image_set_from_icon_name (GTK_IMAGE (icon), name, GTK_ICON_SIZE_DND);
+            return;
+        }
     }
+    gtk_image_set_from_icon_name (GTK_IMAGE (icon), "gtk-execute", GTK_ICON_SIZE_DND);
+}
 
-    /* cancel running thread if needed */
-    if( thread_data ) /* the thread is still running */
-        thread_data->cancel = TRUE; /* cancel the thread */
+/* UI handlers */
 
-    gtk_widget_destroy( dlg );
-    win = NULL;
-
-    /* free app list */
-    g_slist_foreach(app_list, mc_unref, NULL);
-    g_slist_free(app_list);
-    app_list = NULL;
-
-    /* free menu cache */
-    menu_cache_remove_reload_notify(menu_cache, reload_notify_id);
-    reload_notify_id = NULL;
-    menu_cache_unref(menu_cache);
-    menu_cache = NULL;
-
+static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
     gtk_main_quit ();
-}
-
-static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer data)
-{
-    on_response (win, GTK_RESPONSE_CANCEL, NULL);
     return FALSE;
 }
 
-static void button_handler (GtkWidget *widget, gpointer data)
+static void button_handler (GtkWidget *widget, gpointer user_data)
 {
-    on_response (win, (long) data, NULL);
+    if (user_data) launch_application (gtk_entry_get_text (GTK_ENTRY (entry)));
+    gtk_main_quit ();
 }
 
-static gboolean key_press_event (GtkWidget *widget, GdkEventKey *event, gpointer data)
+static gboolean key_press_event (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
     if (event->keyval == GDK_KEY_Escape)
     {
-        on_response (win, GTK_RESPONSE_CANCEL, NULL);
+        gtk_main_quit ();
         return TRUE;
     }
     return FALSE;
 }
 
-static void on_entry_changed( GtkEntry* entry, gpointer data)
-{
-    const char* str = gtk_entry_get_text(entry);
-    MenuCacheApp* app = NULL;
-    if( str && *str )
-        app = match_app_by_exec(str);
-
-    if( app )
-    {
-        const char *name = menu_cache_item_get_icon(MENU_CACHE_ITEM(app));
-        if (name)
-        {
-            gtk_image_set_from_icon_name(GTK_IMAGE (icon), name, GTK_ICON_SIZE_DND);
-            return;
-        }
-    }
-    gtk_image_set_from_icon_name(GTK_IMAGE (icon), "gtk-execute", GTK_ICON_SIZE_DND);
-}
+/* Main function */
 
 int main (int argc, char *argv[])
 {
@@ -371,8 +348,8 @@ int main (int argc, char *argv[])
     g_signal_connect (win, "delete_event", G_CALLBACK (delete_event), NULL);
     g_signal_connect (win, "key-press-event", G_CALLBACK (key_press_event), NULL);
     g_signal_connect (entry ,"changed", G_CALLBACK (on_entry_changed), NULL);
-    g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_OK);
-    g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_CANCEL);
+    g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) 1);
+    g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), NULL);
 
     g_object_unref (builder);
 
@@ -388,7 +365,24 @@ int main (int argc, char *argv[])
 
     gtk_widget_show_all (win);
     gtk_window_present (GTK_WINDOW (win));
+
     gtk_main ();
+
+    /* cancel running thread if needed */
+    if (thread_data) thread_data->cancel = TRUE;
+
+    gtk_widget_destroy (win);
+
+    /* free app list */
+    if (app_list)
+    {
+        g_slist_foreach (app_list, mc_unref, NULL);
+        g_slist_free (app_list);
+    }
+
+    /* free menu cache */
+    if (reload_notify_id) menu_cache_remove_reload_notify (menu_cache, reload_notify_id);
+    if (menu_cache) menu_cache_unref (menu_cache);
 
     return 0;
 }
