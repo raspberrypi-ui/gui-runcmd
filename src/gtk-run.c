@@ -292,7 +292,7 @@ static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer data)
 
 static void button_handler (GtkWidget *widget, gpointer data)
 {
-    on_response (win, (int) data, NULL);
+    on_response (win, (long) data, NULL);
 }
 
 static void on_entry_changed( GtkEntry* entry, GtkImage* img )
