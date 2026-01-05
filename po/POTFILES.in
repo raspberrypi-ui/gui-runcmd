@@ -1,0 +1,4 @@
+[encoding: UTF-8]
+src/gtk-run.c
+# files added by intltool-prepare
+data/gtk-run.desktop.in

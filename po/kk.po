@@ -1,0 +1,49 @@
+# Kazakh translation for lxpanel.
+# Copyright (C) 2012 The LXDE team
+# This file is distributed under the same license as the LXDE package.
+# Baurzhan Muftakhidinov <baurthefirst@gmail.com>, 2012.
+msgid ""
+msgstr ""
+"Project-Id-Version: master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-05 09:39+0000\n"
+"PO-Revision-Date: 2017-05-25 16:59+0000\n"
+"Last-Translator: Baurzhan Muftakhidinov <baurthefirst@gmail.com>\n"
+"Language-Team: Kazakh <kk_KZ@googlegroups.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Pootle 2.8\n"
+"X-Pootle-Revision: 0\n"
+"X-Pootle-Path: /kk/lxpanel/po/kk.po\n"
+"X-POOTLE-MTIME: 1495731571.601482\n"
+
+#: ../src/gtk-run.c:314
+#, fuzzy
+msgctxt "dialog"
+msgid "Run"
+msgstr "Жөнелту"
+
+#: ../src/gtk-run.c:317
+msgid "_Cancel"
+msgstr ""
+
+#: ../src/gtk-run.c:318
+msgid "_OK"
+msgstr ""
+
+#: ../src/gtk-run.c:327
+msgid "Enter the command you want to execute:"
+msgstr "Орындау үшін командалық жолды енгізіңіз:"
+
+#: ../data/gtk-run.desktop.in.h:1
+msgid "Run"
+msgstr "Жөнелту"
+
+#: ../data/gtk-run.desktop.in.h:2
+#, fuzzy
+msgid "Run a command-line application"
+msgstr "Командалық жол опциялары:\n"
+

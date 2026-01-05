@@ -1,0 +1,50 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+msgid ""
+msgstr ""
+"Project-Id-Version: lxpanel_hr\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-05 09:39+0000\n"
+"PO-Revision-Date: 2017-09-28 20:47+0000\n"
+"Last-Translator: Ivica Kolić <ikoli@yahoo.com>\n"
+"Language-Team: <asjlob AT vip.hr>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Pootle 2.8\n"
+"X-Pootle-Revision: 215\n"
+"X-Pootle-Path: /hr/lxpanel/po/hr.po\n"
+"X-POOTLE-MTIME: 1506631641.361068\n"
+
+#: ../src/gtk-run.c:314
+#, fuzzy
+msgctxt "dialog"
+msgid "Run"
+msgstr "Pokreni"
+
+#: ../src/gtk-run.c:317
+msgid "_Cancel"
+msgstr ""
+
+#: ../src/gtk-run.c:318
+msgid "_OK"
+msgstr ""
+
+#: ../src/gtk-run.c:327
+msgid "Enter the command you want to execute:"
+msgstr "Upišite naredbu koju želite izvršiti:"
+
+#: ../data/gtk-run.desktop.in.h:1
+msgid "Run"
+msgstr "Pokreni"
+
+#: ../data/gtk-run.desktop.in.h:2
+#, fuzzy
+msgid "Run a command-line application"
+msgstr "Opcije naredbenog retka:\n"
+

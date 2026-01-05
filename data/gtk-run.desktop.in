@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Run...
+Name=Run
 Comment=Run a command-line application
 Icon=system-run
 Exec=gtk-run
