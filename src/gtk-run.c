@@ -28,6 +28,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
+#include <locale.h>
 #include <glib/gi18n.h>
 #include <string.h>
 #include <unistd.h>
@@ -35,6 +36,7 @@
 #include <menu-cache.h>
 
 static GtkWidget* win = NULL; /* the run dialog */
+static GtkEntry *entry;
 static MenuCache* menu_cache = NULL;
 static GSList* app_list = NULL; /* all known apps in menu cache */
 static gpointer reload_notify_id = NULL;
@@ -254,9 +256,8 @@ static void reload_apps(MenuCache* cache, gpointer)
     app_list = menu_cache_list_all_apps(cache);
 }
 
-static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
+static void on_response( GtkWidget* dlg, gint response, gpointer user_data )
 {
-    GtkEntry* entry = (GtkEntry*)user_data;
     if( G_LIKELY(response == GTK_RESPONSE_OK) )
     {
         launch_application (gtk_entry_get_text(entry));
@@ -266,7 +267,7 @@ static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
     if( thread_data ) /* the thread is still running */
         thread_data->cancel = TRUE; /* cancel the thread */
 
-    gtk_widget_destroy( (GtkWidget*)dlg );
+    gtk_widget_destroy( dlg );
     win = NULL;
 
     /* free app list */
@@ -281,6 +282,17 @@ static void on_response( GtkDialog* dlg, gint response, gpointer user_data )
     menu_cache = NULL;
 
     gtk_main_quit ();
+}
+
+static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+    on_response (win, GTK_RESPONSE_CANCEL, NULL);
+    return FALSE;
+}
+
+static void button_handler (GtkWidget *widget, gpointer data)
+{
+    on_response (win, (int) data, NULL);
 }
 
 static void on_entry_changed( GtkEntry* entry, GtkImage* img )
@@ -304,55 +316,37 @@ static void on_entry_changed( GtkEntry* entry, GtkImage* img )
 
 int main (int argc, char *argv[])
 {
-    GtkWidget *entry, *hbox, *img, *dlg_vbox, *lbl;
+    GtkWidget *img;
+    GtkBuilder *builder;
 
+    setlocale (LC_ALL, "");
+    bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
+    bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
     textdomain (GETTEXT_PACKAGE);
+
     gtk_init (&argc, &argv);
 
-    if(!win)
+    builder = gtk_builder_new_from_file (PACKAGE_UI_DIR "/gtk-run.ui");
+
+    win = (GtkWidget *) gtk_builder_get_object (builder, "main_wd");
+    entry = (GtkEntry *) gtk_builder_get_object (builder, "entry_cmd");
+    img = (GtkWidget *) gtk_builder_get_object (builder, "icon");
+
+    g_signal_connect (G_OBJECT (win), "delete_event", G_CALLBACK (delete_event), NULL);
+    g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_OK);
+    g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_CANCEL);
+    g_signal_connect(entry ,"changed", G_CALLBACK(on_entry_changed), img);
+
+    gtk_widget_show_all( win );
+
+    setup_auto_complete( (GtkEntry*)entry );
+
+    /* get all apps */
+    menu_cache = menu_cache_lookup_sync(g_getenv("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
+    if( menu_cache )
     {
-        win = gtk_dialog_new_with_buttons( C_("dialog", "Run"),
-                                           NULL,
-                                           0,
-                                           _("_Cancel"), GTK_RESPONSE_CANCEL,
-                                           _("_OK"), GTK_RESPONSE_OK,
-                                           NULL );
-        gtk_dialog_set_default_response( (GtkDialog*)win, GTK_RESPONSE_OK );
-        gtk_container_set_border_width(GTK_CONTAINER (win), 5 );
-        entry = gtk_entry_new();
-
-        gtk_entry_set_activates_default( (GtkEntry*)entry, TRUE );
-        dlg_vbox = gtk_dialog_get_content_area((GtkDialog*)win);
-
-        lbl = gtk_label_new(_("Enter the command you want to execute:"));
-        gtk_label_set_xalign (GTK_LABEL (lbl), 0.0);
-        gtk_box_pack_start( (GtkBox*)dlg_vbox,
-                             lbl,
-                             FALSE, FALSE, 0 );
-        hbox = gtk_box_new( GTK_ORIENTATION_HORIZONTAL, 5 );
-        img = gtk_image_new_from_icon_name ( "gtk-execute", GTK_ICON_SIZE_DND );
-        gtk_box_pack_start( (GtkBox*)hbox, img,
-                             FALSE, FALSE, 5 );
-        gtk_box_pack_start( (GtkBox*)hbox, entry, TRUE, TRUE, 5 );
-        gtk_box_pack_start( (GtkBox*)dlg_vbox,
-                             hbox, FALSE, FALSE, 5 );
-        g_signal_connect( win, "response", G_CALLBACK(on_response), entry );
-        gtk_window_set_position( (GtkWindow*)win, GTK_WIN_POS_CENTER );
-        gtk_window_set_default_size( (GtkWindow*)win, 360, -1 );
-        gtk_widget_show_all( win );
-
-        setup_auto_complete( (GtkEntry*)entry );
-        gtk_widget_show(win);
-
-        g_signal_connect(entry ,"changed", G_CALLBACK(on_entry_changed), img);
-
-        /* get all apps */
-        menu_cache = menu_cache_lookup_sync(g_getenv("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
-        if( menu_cache )
-        {
-            app_list = menu_cache_list_all_apps(menu_cache);
-            reload_notify_id = menu_cache_add_reload_notify(menu_cache, reload_apps, NULL);
-        }
+        app_list = menu_cache_list_all_apps(menu_cache);
+        reload_notify_id = menu_cache_add_reload_notify(menu_cache, reload_apps, NULL);
     }
 
     gtk_window_present(GTK_WINDOW(win));
