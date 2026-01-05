@@ -1,56 +1,84 @@
-/*
- * gtk-run.c: Little application launcher
- * Copyright (C) 2006-2010 Hong Jen Yee (PCMan) pcman.tw(AT)gmail.com
- *               2006-2008 Jim Huang <jserv.tw@gmail.com>
- *               2008 Fred Chien <fred@lxde.org>
- *               2009 Ying-Chun Liu (PaulLiu) <grandpaul@gmail.com>
- *               2009-2010 Marty Jack <martyj19@comcast.net>
- *               2012-2013 Henry Gebhardt <hsggebhardt@gmail.com>
- *               2012 Piotr Sipika <Piotr.Sipika@gmail.com>
- *               2014 Andriy Grytsenko <andrej@rep.kiev.ua>
- *
- * This file is a part of LXPanel project.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- */
+/*============================================================================
+Copyright (c) 2026 Raspberry Pi
+All rights reserved.
+No AI tools were used in the creation of this code.
 
-#include <gtk/gtk.h>
-#include <gdk/gdkx.h>
-#include <locale.h>
-#include <glib/gi18n.h>
+Some code taken from the lxpanel project
+
+Copyright (c) 2006-2010 Hong Jen Yee (PCMan) <pcman.tw@gmail.com>
+            2006-2008 Jim Huang <jserv.tw@gmail.com>
+            2008 Fred Chien <fred@lxde.org>
+            2009 Ying-Chun Liu (PaulLiu) <grandpaul@gmail.com>
+            2009-2010 Marty Jack <martyj19@comcast.net>
+            2010 Jürgen Hötzel <juergen@archlinux.org>
+            2010-2011 Julien Lavergne <julien.lavergne@gmail.com>
+            2012-2013 Henry Gebhardt <hsggebhardt@gmail.com>
+            2012 Michael Rawson <michaelrawson76@gmail.com>
+            2014 Max Krummenacher <max.oss.09@gmail.com>
+            2014 SHiNE CsyFeK <csyfek@users.sourceforge.net>
+            2014 Andriy Grytsenko <andrej@rep.kiev.ua>
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holder nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+============================================================================*/
+
 #include <string.h>
 #include <unistd.h>
 
+#include <gtk/gtk.h>
+#include <locale.h>
+#include <glib/gi18n.h>
 #include <menu-cache.h>
 
-static GtkWidget* win = NULL; /* the run dialog */
-static GtkEntry *entry;
-static MenuCache* menu_cache = NULL;
-static GSList* app_list = NULL; /* all known apps in menu cache */
-static gpointer reload_notify_id = NULL;
+/*----------------------------------------------------------------------------*/
+/* Typedefs and macros                                                        */
+/*----------------------------------------------------------------------------*/
 
-typedef struct _ThreadData
+typedef struct
 {
-    gboolean cancel; /* is the loading cancelled */
-    GSList* files; /* all executable files found */
+    gboolean cancel;    /* is the loading cancelled */
+    GSList* files;      /* all executable files found */
     GtkEntry* entry;
-}ThreadData;
+} ThreadData;
 
-static ThreadData* thread_data = NULL; /* thread data used to load availble programs in PATH */
+/*----------------------------------------------------------------------------*/
+/* Global data                                                                */
+/*----------------------------------------------------------------------------*/
 
-void launch_application (const char *appname)
+static GtkWidget *win, *entry, *icon;
+static MenuCache* menu_cache = NULL;
+static GSList* app_list = NULL;             /* all known apps in menu cache */
+static gpointer reload_notify_id = NULL;
+static ThreadData* thread_data = NULL;      /* thread data used to load available programs in PATH */
+
+/*----------------------------------------------------------------------------*/
+/* Prototypes                                                                 */
+/*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
+/* Function definitions                                                       */
+/*----------------------------------------------------------------------------*/
+
+static void launch_application (const char *appname)
 {
     char *cmd[2] = {(char *) appname, NULL};
     g_spawn_async (NULL, cmd, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
@@ -228,11 +256,11 @@ static gpointer thread_func(ThreadData* data)
     return NULL;
 }
 
-static void setup_auto_complete( GtkEntry* entry )
+static void setup_auto_complete (void)
 {
     /* load in another working thread */
     thread_data = g_slice_new0(ThreadData); /* the data will be freed in idle handler later. */
-    thread_data->entry = entry;
+    thread_data->entry = GTK_ENTRY (entry);
     g_thread_new("gtk-run-autocomplete", (GThreadFunc)thread_func, thread_data);
     /* we don't use loader_thread_id but Glib 2.32 crashes if we unref
        GThread while it's in creation progress. It is a bug of GLib
@@ -247,7 +275,6 @@ static void mc_unref (gpointer data, gpointer)
 
 static void reload_apps(MenuCache* cache, gpointer)
 {
-    g_debug("reload apps!");
     if(app_list)
     {
         g_slist_foreach(app_list, mc_unref, NULL);
@@ -258,9 +285,9 @@ static void reload_apps(MenuCache* cache, gpointer)
 
 static void on_response( GtkWidget* dlg, gint response, gpointer user_data )
 {
-    if( G_LIKELY(response == GTK_RESPONSE_OK) )
+    if (response == GTK_RESPONSE_OK)
     {
-        launch_application (gtk_entry_get_text(entry));
+        launch_application (gtk_entry_get_text (GTK_ENTRY (entry)));
     }
 
     /* cancel running thread if needed */
@@ -305,7 +332,7 @@ static gboolean key_press_event (GtkWidget *widget, GdkEventKey *event, gpointer
     return FALSE;
 }
 
-static void on_entry_changed( GtkEntry* entry, GtkImage* img )
+static void on_entry_changed( GtkEntry* entry, gpointer data)
 {
     const char* str = gtk_entry_get_text(entry);
     MenuCacheApp* app = NULL;
@@ -317,16 +344,15 @@ static void on_entry_changed( GtkEntry* entry, GtkImage* img )
         const char *name = menu_cache_item_get_icon(MENU_CACHE_ITEM(app));
         if (name)
         {
-            gtk_image_set_from_icon_name(img, name, GTK_ICON_SIZE_DND);
+            gtk_image_set_from_icon_name(GTK_IMAGE (icon), name, GTK_ICON_SIZE_DND);
             return;
         }
     }
-    gtk_image_set_from_icon_name(img, "gtk-execute", GTK_ICON_SIZE_DND);
+    gtk_image_set_from_icon_name(GTK_IMAGE (icon), "gtk-execute", GTK_ICON_SIZE_DND);
 }
 
 int main (int argc, char *argv[])
 {
-    GtkWidget *img;
     GtkBuilder *builder;
 
     setlocale (LC_ALL, "");
@@ -339,28 +365,33 @@ int main (int argc, char *argv[])
     builder = gtk_builder_new_from_file (PACKAGE_UI_DIR "/gui-runner.ui");
 
     win = (GtkWidget *) gtk_builder_get_object (builder, "main_wd");
-    entry = (GtkEntry *) gtk_builder_get_object (builder, "entry_cmd");
-    img = (GtkWidget *) gtk_builder_get_object (builder, "icon");
+    entry = (GtkWidget *) gtk_builder_get_object (builder, "entry_cmd");
+    icon = (GtkWidget *) gtk_builder_get_object (builder, "icon");
 
-    g_signal_connect (G_OBJECT (win), "delete_event", G_CALLBACK (delete_event), NULL);
-    g_signal_connect (G_OBJECT (win), "key-press-event", G_CALLBACK (key_press_event), NULL);
+    g_signal_connect (win, "delete_event", G_CALLBACK (delete_event), NULL);
+    g_signal_connect (win, "key-press-event", G_CALLBACK (key_press_event), NULL);
+    g_signal_connect (entry ,"changed", G_CALLBACK (on_entry_changed), NULL);
     g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_OK);
     g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), (void *) GTK_RESPONSE_CANCEL);
-    g_signal_connect(entry ,"changed", G_CALLBACK(on_entry_changed), img);
 
-    gtk_widget_show_all( win );
+    g_object_unref (builder);
 
-    setup_auto_complete( (GtkEntry*)entry );
+    setup_auto_complete ();
 
     /* get all apps */
-    menu_cache = menu_cache_lookup_sync(g_getenv("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
-    if( menu_cache )
+    menu_cache = menu_cache_lookup_sync (g_getenv ("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
+    if (menu_cache)
     {
-        app_list = menu_cache_list_all_apps(menu_cache);
-        reload_notify_id = menu_cache_add_reload_notify(menu_cache, reload_apps, NULL);
+        app_list = menu_cache_list_all_apps (menu_cache);
+        reload_notify_id = menu_cache_add_reload_notify (menu_cache, reload_apps, NULL);
     }
 
-    gtk_window_present(GTK_WINDOW(win));
+    gtk_widget_show_all (win);
+    gtk_window_present (GTK_WINDOW (win));
     gtk_main ();
+
     return 0;
 }
+
+/* End of file */
+/*----------------------------------------------------------------------------*/
