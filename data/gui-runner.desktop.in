@@ -3,5 +3,5 @@ Type=Application
 Name=Run
 Comment=Run a command-line application
 Icon=system-run
-Exec=gtk-run
+Exec=gui-runner
 StartupNotify=true

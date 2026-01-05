@@ -1,7 +1,7 @@
-install_data('gtk-run.ui', install_dir: ui_dir)
+install_data('gui-runner.ui', install_dir: ui_dir)
 
-i18n.merge_file(input: 'gtk-run.desktop.in',
-  output: 'gtk-run.desktop',
+i18n.merge_file(input: 'gui-runner.desktop.in',
+  output: 'gui-runner.desktop',
   type: 'desktop',
   po_dir: '../po',
   install: true,

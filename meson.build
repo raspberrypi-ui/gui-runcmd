@@ -1,4 +1,4 @@
-project ('gtk-run','c')
+project ('gui-runner','c')
 
 share_dir = join_paths(get_option('prefix'), 'share')
 resource_dir = join_paths(share_dir, meson.project_name())
