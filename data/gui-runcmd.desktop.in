@@ -4,4 +4,3 @@ Name=Run
 Comment=Run a command-line application
 Icon=system-run
 Exec=gui-runcmd
-StartupNotify=true
