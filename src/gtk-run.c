@@ -222,20 +222,12 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
         if (len > 0)
         {
             target[len] = '\0';
-            ret = match_app_by_exec (target);
-            if (!ret)
-            {
-                /* FIXME: Actually, target could be relative paths.
-                 *        So, actually path resolution is needed here. */
-                char *basename = g_path_get_basename (target);
-                char *locate = g_find_program_in_path (basename);
-                if (locate && strcmp (locate, target) == 0)
-                {
-                    ret = match_app_by_exec (basename);
-                    g_free (locate);
-                }
-                g_free (basename);
-            }
+
+            char *sympath = g_canonicalize_filename (target, g_path_get_dirname (exec_path));
+            char *basename = g_path_get_basename (sympath);
+            ret = match_app_by_exec (basename);
+            g_free (sympath);
+            g_free (basename);
         }
     }
 
