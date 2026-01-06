@@ -1,7 +1,7 @@
-install_data('gui-runner.ui', install_dir: ui_dir)
+install_data('gui-runcmd.ui', install_dir: ui_dir)
 
-i18n.merge_file(input: 'gui-runner.desktop.in',
-  output: 'gui-runner.desktop',
+i18n.merge_file(input: 'gui-runcmd.desktop.in',
+  output: 'gui-runcmd.desktop',
   type: 'desktop',
   po_dir: '../po',
   install: true,

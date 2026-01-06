@@ -329,7 +329,7 @@ int main (int argc, char *argv[])
 
     gtk_init (&argc, &argv);
 
-    builder = gtk_builder_new_from_file (PACKAGE_UI_DIR "/gui-runner.ui");
+    builder = gtk_builder_new_from_file (PACKAGE_UI_DIR "/gui-runcmd.ui");
 
     win = (GtkWidget *) gtk_builder_get_object (builder, "main_wd");
     entry = (GtkWidget *) gtk_builder_get_object (builder, "entry_cmd");

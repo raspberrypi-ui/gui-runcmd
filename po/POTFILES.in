@@ -1,5 +1,5 @@
 [encoding: UTF-8]
 src/gtk-run.c
-[type: gettext/glade] data/gui-runner.ui
+[type: gettext/glade] data/gui-runcmd.ui
 # files added by intltool-prepare
-data/gui-runner.desktop.in
+data/gui-runcmd.desktop.in
