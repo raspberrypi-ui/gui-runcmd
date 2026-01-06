@@ -45,7 +45,6 @@ No AI tools were used in the creation of this code.
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <gtk/gtk.h>
 #include <locale.h>
@@ -216,8 +215,8 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
         }
     }
 
-    /* if this is a symlink */
-    if (!ret && g_file_test (exec_path, G_FILE_TEST_IS_SYMLINK))
+    /* might be symlink, absolute path - try canonicalizing and stripping */
+    if (!ret)
     {
         char *sympath = canonicalize_file_name (exec_path);
         char *basename = g_path_get_basename (sympath);
