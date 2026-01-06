@@ -61,7 +61,6 @@ No AI tools were used in the creation of this code.
 static GtkWidget *win, *entry, *icon;
 static MenuCache *menu_cache = NULL;
 static GSList *app_list = NULL;
-static gpointer reload_notify_id = NULL;
 static GtkListStore *path_apps;
 static GThread *app_thread = NULL;
 static gboolean thread_term = FALSE;
@@ -73,7 +72,6 @@ static gboolean thread_term = FALSE;
 static void launch_application (const char *appname);
 static gpointer find_apps (gpointer user_data);
 static gboolean find_apps_done (gpointer user_data);
-static void reload_apps (MenuCache* cache, gpointer user_data);
 static void on_entry_changed (GtkEntry* entry, gpointer user_data);
 static MenuCacheApp* match_app_by_exec (const char* exec);
 static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer user_data);
@@ -150,16 +148,6 @@ static gboolean find_apps_done (gpointer user_data)
     g_object_unref (path_apps);
 
     return FALSE;
-}
-
-static void reload_apps (MenuCache* cache, gpointer user_data)
-{
-    if (app_list)
-    {
-        g_slist_foreach (app_list, (GFunc) menu_cache_item_unref, NULL);
-        g_slist_free (app_list);
-    }
-    app_list = menu_cache_list_all_apps (cache);
 }
 
 static void on_entry_changed (GtkEntry* entry, gpointer user_data)
@@ -306,11 +294,7 @@ int main (int argc, char *argv[])
 
     /* get all apps */
     menu_cache = menu_cache_lookup_sync (g_getenv ("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
-    if (menu_cache)
-    {
-        app_list = menu_cache_list_all_apps (menu_cache);
-        reload_notify_id = menu_cache_add_reload_notify (menu_cache, reload_apps, NULL);
-    }
+    if (menu_cache) app_list = menu_cache_list_all_apps (menu_cache);
 
     gtk_widget_show_all (win);
     gtk_window_present (GTK_WINDOW (win));
@@ -333,7 +317,6 @@ int main (int argc, char *argv[])
     }
 
     /* free menu cache */
-    if (reload_notify_id) menu_cache_remove_reload_notify (menu_cache, reload_notify_id);
     if (menu_cache) menu_cache_unref (menu_cache);
 
     return 0;
