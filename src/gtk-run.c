@@ -42,6 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 No AI tools were used in the creation of this code.
 ============================================================================*/
 
+#define _GNU_SOURCE
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -217,18 +219,11 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
     /* if this is a symlink */
     if (!ret && g_file_test (exec_path, G_FILE_TEST_IS_SYMLINK))
     {
-        char target[512]; /* FIXME: is this enough? */
-        len = readlink (exec_path, target, sizeof (target) - 1);
-        if (len > 0)
-        {
-            target[len] = '\0';
-
-            char *sympath = g_canonicalize_filename (target, g_path_get_dirname (exec_path));
-            char *basename = g_path_get_basename (sympath);
-            ret = match_app_by_exec (basename);
-            g_free (sympath);
-            g_free (basename);
-        }
+        char *sympath = canonicalize_file_name (exec_path);
+        char *basename = g_path_get_basename (sympath);
+        ret = match_app_by_exec (basename);
+        g_free (sympath);
+        g_free (basename);
     }
 
     g_free (exec_path);
