@@ -72,7 +72,7 @@ static gboolean thread_term = FALSE;
 static void launch_application (const char *appname);
 static gpointer find_apps (gpointer user_data);
 static gboolean find_apps_done (gpointer user_data);
-static void on_entry_changed (GtkEntry* entry, gpointer user_data);
+static void entry_changed_event (GtkEntry* entry, gpointer user_data);
 static MenuCacheApp* match_app_by_exec (const char* exec);
 static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer user_data);
 static void button_handler (GtkWidget *widget, gpointer user_data);
@@ -82,11 +82,15 @@ static gboolean key_press_event (GtkWidget *widget, GdkEventKey *event, gpointer
 /* Function definitions                                                       */
 /*----------------------------------------------------------------------------*/
 
+/* Application launch */
+
 static void launch_application (const char *appname)
 {
     char *cmd[2] = {(char *) appname, NULL};
     g_spawn_async (NULL, cmd, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL);
 }
+
+/* Scan system path for executable files */
 
 static gpointer find_apps (gpointer user_data)
 {
@@ -150,7 +154,9 @@ static gboolean find_apps_done (gpointer user_data)
     return FALSE;
 }
 
-static void on_entry_changed (GtkEntry* entry, gpointer user_data)
+/* Handle updating of icon when entry changed */
+
+static void entry_changed_event (GtkEntry* entry, gpointer user_data)
 {
     const char *str = gtk_entry_get_text (entry);
     MenuCacheApp *app = NULL;
@@ -162,11 +168,11 @@ static void on_entry_changed (GtkEntry* entry, gpointer user_data)
         const char *name = menu_cache_item_get_icon (MENU_CACHE_ITEM (app));
         if (name)
         {
-            gtk_image_set_from_icon_name (GTK_IMAGE (icon), name, GTK_ICON_SIZE_DND);
+            gtk_image_set_from_icon_name (GTK_IMAGE (icon), name, GTK_ICON_SIZE_DIALOG);
             return;
         }
     }
-    gtk_image_set_from_icon_name (GTK_IMAGE (icon), "gtk-execute", GTK_ICON_SIZE_DND);
+    gtk_image_set_from_icon_name (GTK_IMAGE (icon), "gtk-execute", GTK_ICON_SIZE_DIALOG);
 }
 
 static MenuCacheApp *match_app_by_exec (const char* exec)
@@ -283,7 +289,7 @@ int main (int argc, char *argv[])
 
     g_signal_connect (win, "delete_event", G_CALLBACK (delete_event), NULL);
     g_signal_connect (win, "key-press-event", G_CALLBACK (key_press_event), NULL);
-    g_signal_connect (entry ,"changed", G_CALLBACK (on_entry_changed), NULL);
+    g_signal_connect (entry ,"changed", G_CALLBACK (entry_changed_event), NULL);
     g_signal_connect (gtk_builder_get_object (builder, "btn_ok"), "clicked", G_CALLBACK (button_handler), (void *) 1);
     g_signal_connect (gtk_builder_get_object (builder, "btn_cancel"), "clicked", G_CALLBACK (button_handler), NULL);
 
@@ -292,7 +298,6 @@ int main (int argc, char *argv[])
     path_apps = gtk_list_store_new (1, G_TYPE_STRING);
     app_thread = g_thread_new (NULL, (GThreadFunc) find_apps, NULL);
 
-    /* get all apps */
     menu_cache = menu_cache_lookup_sync (g_getenv ("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
     if (menu_cache) app_list = menu_cache_list_all_apps (menu_cache);
 
@@ -309,14 +314,12 @@ int main (int argc, char *argv[])
         while (app_thread);
     }
 
-    /* free app list */
     if (app_list)
     {
         g_slist_foreach (app_list, (GFunc) menu_cache_item_unref, NULL);
         g_slist_free (app_list);
     }
 
-    /* free menu cache */
     if (menu_cache) menu_cache_unref (menu_cache);
 
     return 0;
