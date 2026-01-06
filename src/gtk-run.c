@@ -1,7 +1,6 @@
 /*============================================================================
 Copyright (c) 2026 Raspberry Pi
 All rights reserved.
-No AI tools were used in the creation of this code.
 
 Some code taken from the lxpanel project
 
@@ -39,6 +38,8 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+No AI tools were used in the creation of this code.
 ============================================================================*/
 
 #include <string.h>
@@ -53,22 +54,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* Typedefs and macros                                                        */
 /*----------------------------------------------------------------------------*/
 
-typedef struct
-{
-    gboolean cancel;    /* is the loading cancelled */
-    GSList *files;      /* all executable files found */
-    GtkEntry *entry;
-} ThreadData;
-
 /*----------------------------------------------------------------------------*/
 /* Global data                                                                */
 /*----------------------------------------------------------------------------*/
 
 static GtkWidget *win, *entry, *icon;
 static MenuCache *menu_cache = NULL;
-static GSList *app_list = NULL;             /* all known apps in menu cache */
+static GSList *app_list = NULL;
 static gpointer reload_notify_id = NULL;
-static ThreadData *thread_data = NULL;      /* thread data used to load available programs in PATH */
+static GtkListStore *path_apps;
+static GThread *app_thread = NULL;
+static gboolean thread_term = FALSE;
 
 /*----------------------------------------------------------------------------*/
 /* Prototypes                                                                 */
@@ -169,92 +165,66 @@ static MenuCacheApp* match_app_by_exec(const char* exec)
     return ret;
 }
 
-static void setup_auto_complete_with_data(ThreadData* data)
+static gboolean find_apps_done (gpointer user_data)
 {
-    GtkListStore* store;
-    GSList *l;
-    GtkEntryCompletion* comp = gtk_entry_completion_new();
-    gtk_entry_completion_set_minimum_key_length( comp, 2 );
-    gtk_entry_completion_set_inline_completion( comp, TRUE );
-    gtk_entry_completion_set_popup_set_width( comp, TRUE );
-    gtk_entry_completion_set_popup_single_match( comp, FALSE );
-    store = gtk_list_store_new( 1, G_TYPE_STRING );
+    if (thread_term) return FALSE;
 
-    for( l = data->files; l; l = l->next )
-    {
-        const char *name = (const char*)l->data;
-        GtkTreeIter it;
-        gtk_list_store_append( store, &it );
-        gtk_list_store_set( store, &it, 0, name, -1 );
-    }
+    GtkEntryCompletion* comp = gtk_entry_completion_new ();
+    gtk_entry_completion_set_minimum_key_length (comp, 1);
+    gtk_entry_completion_set_inline_completion (comp, TRUE);
+    gtk_entry_completion_set_popup_set_width (comp, TRUE);
+    gtk_entry_completion_set_popup_single_match (comp, FALSE);
+    gtk_entry_completion_set_model (comp, GTK_TREE_MODEL (path_apps));
+    gtk_entry_completion_set_text_column (comp, 0);
+    gtk_entry_set_completion (GTK_ENTRY (entry), comp);
+    gtk_entry_completion_complete (comp);
+    g_object_unref (comp);
+    g_object_unref (path_apps);
 
-    gtk_entry_completion_set_model( comp, (GtkTreeModel*)store );
-    g_object_unref( store );
-    gtk_entry_completion_set_text_column( comp, 0 );
-    gtk_entry_set_completion( (GtkEntry*)data->entry, comp );
-
-    /* trigger entry completion */
-    gtk_entry_completion_complete(comp);
-    g_object_unref( comp );
-}
-
-static gboolean on_thread_finished (ThreadData* data)
-{
-    /* don't setup entry completion if the thread is already cancelled. */
-    if (!data->cancel) setup_auto_complete_with_data (thread_data);
-
-    g_slist_free_full (data->files, g_free);
-    g_slice_free (ThreadData, data);
-
-    thread_data = NULL;
     return FALSE;
 }
 
-static gpointer thread_func(ThreadData* data)
+static gpointer find_apps (gpointer user_data)
 {
-    GSList *list = NULL;
-    gchar **dirname;
-    gchar **dirnames = g_strsplit( g_getenv("PATH"), ":", 0 );
+    const char *name;
+    char *filename;
+    GDir *dir;
+    gchar **dirname, **dirnames;
+    GtkTreeIter iter;
+    GHashTable *hash;
 
-    for( dirname = dirnames; !thread_data->cancel && *dirname; ++dirname )
+    hash = g_hash_table_new (g_direct_hash, g_direct_equal);
+    dirnames = g_strsplit (g_getenv ("PATH"), ":", 0);
+    for (dirname = dirnames; *dirname; ++dirname)
     {
-        GDir *dir = g_dir_open( *dirname, 0, NULL );
-        const char *name;
-        if( ! dir )
-            continue;
-        while( !thread_data->cancel && (name = g_dir_read_name(dir)) )
+        if (thread_term) break;
+        dir = g_dir_open (*dirname, 0, NULL);
+        if (!dir) continue;
+        while ((name = g_dir_read_name (dir)) != NULL)
         {
-            char* filename = g_build_filename( *dirname, name, NULL );
-            if( g_file_test( filename, G_FILE_TEST_IS_EXECUTABLE ) )
+            if (thread_term) break;
+            filename = g_build_filename (*dirname, name, NULL);
+            if (g_file_test (filename, G_FILE_TEST_IS_EXECUTABLE))
             {
-                if(thread_data->cancel)
-                    break;
-                if( !g_slist_find_custom( list, name, (GCompareFunc)strcmp ) )
-                    list = g_slist_prepend( list, g_strdup( name ) );
+                if (!g_hash_table_lookup (hash, name))
+                {
+                    g_hash_table_add (hash, (gpointer) name);
+                    gtk_list_store_append (path_apps, &iter);
+                    gtk_list_store_set (path_apps, &iter, 0, name, -1);
+                }
             }
-            g_free( filename );
+            g_free (filename);
         }
-        g_dir_close( dir );
+        g_dir_close (dir);
     }
-    g_strfreev( dirnames );
+    g_strfreev (dirnames);
+    g_hash_table_unref (hash);
 
-    data->files = list;
-    /* install an idle handler to free associated data */
-    g_idle_add((GSourceFunc)on_thread_finished, data);
-    g_thread_unref(g_thread_self());
+    if (!thread_term) g_idle_add ((GSourceFunc) find_apps_done, NULL);
+    g_thread_unref (app_thread);
+    app_thread = NULL;
 
     return NULL;
-}
-
-static void setup_auto_complete (void)
-{
-    /* load in another working thread */
-    thread_data = g_slice_new0(ThreadData); /* the data will be freed in idle handler later. */
-    thread_data->entry = GTK_ENTRY (entry);
-    g_thread_new("gtk-run-autocomplete", (GThreadFunc)thread_func, thread_data);
-    /* we don't use loader_thread_id but Glib 2.32 crashes if we unref
-       GThread while it's in creation progress. It is a bug of GLib
-       certainly but as workaround we'll unref it in the thread itself */
 }
 
 static void mc_unref (gpointer data, gpointer user_data)
@@ -296,6 +266,7 @@ static void on_entry_changed (GtkEntry* entry, gpointer user_data)
 
 static gboolean delete_event (GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
+    win = NULL;
     gtk_main_quit ();
     return FALSE;
 }
@@ -343,7 +314,8 @@ int main (int argc, char *argv[])
 
     g_object_unref (builder);
 
-    setup_auto_complete ();
+    path_apps = gtk_list_store_new (1, G_TYPE_STRING);
+    app_thread = g_thread_new (NULL, (GThreadFunc) find_apps, NULL);
 
     /* get all apps */
     menu_cache = menu_cache_lookup_sync (g_getenv ("XDG_MENU_PREFIX") ? "applications.menu" : "lxde-applications.menu" );
@@ -358,10 +330,13 @@ int main (int argc, char *argv[])
 
     gtk_main ();
 
-    /* cancel running thread if needed */
-    if (thread_data) thread_data->cancel = TRUE;
+    if (win) gtk_widget_destroy (win);
 
-    gtk_widget_destroy (win);
+    if (app_thread)
+    {
+        thread_term = TRUE;
+        while (app_thread);
+    }
 
     /* free app list */
     if (app_list)
