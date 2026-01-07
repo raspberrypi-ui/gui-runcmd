@@ -180,7 +180,7 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
 {
     GSList *l;
     MenuCacheApp *app, *ret = NULL;
-    char *exec_path;
+    char *exec_path, *sympath, *basename, *locate;
     const char *pexec, *app_exec;
     int len;
 
@@ -218,13 +218,17 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
     /* might be symlink, absolute path - try canonicalizing and stripping */
     if (!ret)
     {
-        char *sympath = canonicalize_file_name (exec_path);
-        char *basename = g_path_get_basename (sympath);
-        ret = match_app_by_exec (basename);
+        sympath = canonicalize_file_name (exec_path);
+        basename = g_path_get_basename (sympath);
+        locate = g_find_program_in_path (basename);
+        if (locate && !strcmp (locate, sympath))
+        {
+            ret = match_app_by_exec (basename);
+            g_free (locate);
+        }
         g_free (sympath);
         g_free (basename);
     }
-
     g_free (exec_path);
     return ret;
 }
