@@ -215,8 +215,8 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
         }
     }
 
-    /* might be symlink, absolute path - try canonicalizing and stripping */
-    if (!ret)
+    /* might be symlink or absolute path - try canonicalizing and stripping */
+    if (!ret && (g_file_test (exec_path, G_FILE_TEST_IS_SYMLINK) || g_path_is_absolute (exec)))
     {
         sympath = canonicalize_file_name (exec_path);
         basename = g_path_get_basename (sympath);
@@ -229,6 +229,7 @@ static MenuCacheApp *match_app_by_exec (const char* exec)
         g_free (sympath);
         g_free (basename);
     }
+
     g_free (exec_path);
     return ret;
 }
