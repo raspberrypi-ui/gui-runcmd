@@ -2,5 +2,6 @@
 Type=Application
 Name=Run
 Comment=Run a command-line application
+Categories=Applications
 Icon=system-run
 Exec=gui-runcmd
