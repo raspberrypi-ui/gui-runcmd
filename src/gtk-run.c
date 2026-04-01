@@ -49,6 +49,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <glib/gi18n.h>
 #include <menu-cache.h>
 
+#include "activate.h"
+
 /*----------------------------------------------------------------------------*/
 /* Typedefs and macros                                                        */
 /*----------------------------------------------------------------------------*/
@@ -263,6 +265,8 @@ int main (int argc, char *argv[])
 {
     GtkBuilder *builder;
 
+    init_dbus ("runcmd");
+
     setlocale (LC_ALL, "");
     bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
     bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
@@ -293,6 +297,8 @@ int main (int argc, char *argv[])
     gtk_widget_show_all (win);
     gtk_window_present (GTK_WINDOW (win));
 
+    setup_activate (win);
+
     gtk_main ();
 
     if (win) gtk_widget_destroy (win);
@@ -310,6 +316,8 @@ int main (int argc, char *argv[])
     }
 
     if (menu_cache) menu_cache_unref (menu_cache);
+
+    close_dbus ();
 
     return 0;
 }

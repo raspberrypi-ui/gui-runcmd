@@ -2,9 +2,10 @@ gtk = dependency('gtk+-3.0')
 menu_cache = dependency('libmenu-cache')
 
 sources = files(
-  'gtk-run.c'
+  'gtk-run.c',
+  'activate.c'
 )
 
-deps = [ gtk, menu_cache ]
+deps = [ deps, gtk, menu_cache ]
 
 executable (meson.project_name(), sources, dependencies: deps, install: true)

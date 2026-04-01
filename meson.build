@@ -13,6 +13,11 @@ add_project_arguments('-DPACKAGE_LOCALE_DIR="' + share_dir + '/locale"', languag
 add_project_arguments('-DPACKAGE_DATA_DIR="' + resource_dir + '"', language : 'c' )
 add_project_arguments('-DPACKAGE_UI_DIR="' + ui_dir + '"', language : [ 'c', 'cpp' ])
 
+wayland_client = dependency('wayland-client')
+wayland_protos = dependency('wayland-protocols')
+subdir('proto')
+deps = [ wf_protos ]
+
 subdir('po')
 subdir('src')
 subdir('data')
