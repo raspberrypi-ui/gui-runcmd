@@ -1,3 +1,9 @@
+gui-runcmd (0.2) trixie; urgency=medium
+
+  * Add activation
+
+ -- Simon Long <simon@raspberrypi.com>  Wed, 01 Apr 2026 13:22:55 +0100
+
 gui-runcmd (0.1) trixie; urgency=low
 
   * Initial release
