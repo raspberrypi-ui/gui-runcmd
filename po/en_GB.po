@@ -38,7 +38,7 @@ msgstr "Enter the command to execute:"
 
 #: ../data/gtk-run.desktop.in.h:1
 msgid "Run"
-msgstr "Run..."
+msgstr "Run Command"
 
 #: ../data/gtk-run.desktop.in.h:2
 msgid "Run a command-line application"

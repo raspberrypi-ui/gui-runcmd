@@ -1,3 +1,9 @@
+gui-runcmd (0.3) trixie; urgency=medium
+
+  * Change label and move to Accessories
+
+ -- Simon Long <simon@raspberrypi.com>  Thu, 03 Sep 2026 14:59:04 +0100
+
 gui-runcmd (0.2) trixie; urgency=medium
 
   * Add activation
